@@ -1,22 +1,21 @@
-// SPDX-License-Identifier: UNLICENSED
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.21;
 
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {IFaucet} from "./interfaces/IFaucet.sol";
 import {IIdRegistry} from "./interfaces/IIdRegistry.sol";
 
-contract Faucet is Ownable {
+contract Faucet is IFaucet, Ownable {
+    /*//////////////////////////////////////////////////////////////
+                              CONSTANTS
+    //////////////////////////////////////////////////////////////*/
+
     uint256 public constant ONE_HUNDRED_PERCENT = 1e18;
 
-    struct Claimer {
-        uint256 registeredForPeriod;
-        uint256 latestClaimPeriod;
-    }
-
-    struct Period {
-        uint256 totalRegisteredUsers;
-        uint256 maxPayout;
-    }
+    /*//////////////////////////////////////////////////////////////
+                                 STORAGE
+    //////////////////////////////////////////////////////////////*/
 
     ERC20 public token;
     uint256 public periodLength;
@@ -27,12 +26,11 @@ contract Faucet is Ownable {
     mapping(uint256 => Claimer) public claimers;
     mapping(uint256 => Period) public periods;
 
-    IIdRegistry public registry;
+    IIdRegistry private registry;
 
-    event Initialize(address token, uint256 periodLength, uint256 percentPerPeriod);
-    event SetPercentPerPeriod(uint256 percentPerPeriod);
-    event Claim(address claimer, uint256 periodNumber, uint256 claimerPayout);
-    event Register(address sender, uint256 periodNumber);
+    /*//////////////////////////////////////////////////////////////
+                               CONSTRUCTOR
+    //////////////////////////////////////////////////////////////*/
 
     /**
      * @param _token Token distributed by the faucet
@@ -51,9 +49,22 @@ contract Faucet is Ownable {
         periodLength = _periodLength;
         percentPerPeriod = _percentPerPeriod;
         firstPeriodStart = block.timestamp;
-
-        emit Initialize(address(_token), _periodLength, _percentPerPeriod);
     }
+
+    /*//////////////////////////////////////////////////////////////
+                                 MODIFIERS
+    //////////////////////////////////////////////////////////////*/
+
+    modifier hasFid(address _caller) {
+        if (registry.idOf(_caller) == 0) {
+            revert HasNoId();
+        }
+        _;
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                               SETTERS
+    //////////////////////////////////////////////////////////////*/
 
     /**
      * @notice Set percent per period
@@ -66,15 +77,19 @@ contract Faucet is Ownable {
         emit SetPercentPerPeriod(_percentPerPeriod);
     }
 
+    /*//////////////////////////////////////////////////////////////
+                            CLAIM LOGIC
+    //////////////////////////////////////////////////////////////*/
+
     /**
      * @notice Register for the next period and claim if registered for the current period.
      */
-    function claimAndOrRegister() public {
-        uint256 fid = registry.idOf(msg.sender);
-        require(fid != 0, "Address does not own an fid");
+    function claimAndOrRegister() public hasFid(msg.sender) {
+        Claimer storage claimer = claimers[registry.idOf(msg.sender)];
 
-        Claimer storage claimer = claimers[fid];
-        require(claimer.registeredForPeriod <= getCurrentPeriod(), "Already registered");
+        if (!(claimer.registeredForPeriod <= getCurrentPeriod())) {
+            revert AlreadyRegisterd();
+        }
 
         uint256 currentPeriod = getCurrentPeriod();
         if (_canClaim(claimer, currentPeriod)) {
@@ -91,13 +106,13 @@ contract Faucet is Ownable {
     /**
      * @notice Claim from the faucet without registering for the next period.
      */
-    function claim() public {
-        uint256 fid = registry.idOf(msg.sender);
-        require(fid != 0, "Address does not own an fid");
-
-        Claimer storage claimer = claimers[fid];
+    function claim() public hasFid(msg.sender) {
+        Claimer storage claimer = claimers[registry.idOf(msg.sender)];
         uint256 currentPeriod = getCurrentPeriod();
-        require(_canClaim(claimer, currentPeriod), "Can not claim");
+
+        if (!_canClaim(claimer, currentPeriod)) {
+            revert Unauthorized();
+        }
 
         _claim(claimer, currentPeriod);
     }
@@ -109,6 +124,10 @@ contract Faucet is Ownable {
     function withdrawDeposit(address _to) public onlyOwner {
         token.transfer(_to, token.balanceOf(address(this)));
     }
+
+    /*//////////////////////////////////////////////////////////////
+                            VIEW FUNCTIONS
+    //////////////////////////////////////////////////////////////*/
 
     /**
      * @notice Get the current period number
@@ -126,6 +145,10 @@ contract Faucet is Ownable {
         Period storage period = periods[_periodNumber];
         return _getPeriodIndividualPayout(period);
     }
+
+    /*//////////////////////////////////////////////////////////////
+                            INTERNAL FUNCTIONS
+    //////////////////////////////////////////////////////////////*/
 
     function _canClaim(Claimer storage claimer, uint256 currentPeriod) internal view returns (bool) {
         bool userRegisteredCurrentPeriod = claimer.registeredForPeriod == currentPeriod;

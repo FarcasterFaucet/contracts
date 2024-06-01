@@ -342,12 +342,10 @@ interface IIdRegistry {
      *
      * @return isValid Whether provided signature is valid.
      */
-    function verifyFidSignature(
-        address custodyAddress,
-        uint256 fid,
-        bytes32 digest,
-        bytes calldata sig
-    ) external view returns (bool isValid);
+    function verifyFidSignature(address custodyAddress, uint256 fid, bytes32 digest, bytes calldata sig)
+        external
+        view
+        returns (bool isValid);
 
     /*//////////////////////////////////////////////////////////////
                          PERMISSIONED ACTIONS
