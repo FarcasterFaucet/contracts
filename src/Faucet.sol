@@ -3,8 +3,9 @@ pragma solidity ^0.8.21;
 
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-import {IFaucet} from "./interfaces/IFaucet.sol";
 import {IIdRegistry} from "./interfaces/IIdRegistry.sol";
+
+import {IFaucet} from "./interfaces/IFaucet.sol";
 
 contract Faucet is IFaucet, Ownable {
     /*//////////////////////////////////////////////////////////////

@@ -3,25 +3,15 @@ pragma solidity ^0.8.21;
 
 import {Test, console} from "forge-std/Test.sol";
 
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
-
+import {Token} from "../src/Token.sol";
 import {Faucet} from "../src/Faucet.sol";
-
-contract TestToken is ERC20, Ownable {
-    constructor(address initialOwner) ERC20("MyToken", "MTK") Ownable(initialOwner) {}
-
-    function mint(address to, uint256 amount) public onlyOwner {
-        _mint(to, amount);
-    }
-}
 
 contract FaucetTest is Test {
     // fork env
     uint256 OP_FORK_BLOCK_NUMBER = 120797050;
     string OP_RPC_URL = vm.envOr("OP_RPC_URL", string("https://optimism.quiknode.pro/"));
 
-    TestToken public token;
+    Token public token;
     Faucet public faucet;
 
     address constant FARCASTER_REGISTRY = 0x00000000Fc6c5F01Fc30151999387Bb99A9f489b;
@@ -35,11 +25,11 @@ contract FaucetTest is Test {
     function setUp() public {
         vm.createSelectFork(OP_RPC_URL, OP_FORK_BLOCK_NUMBER);
 
-        token = new TestToken(address(this));
+        token = new Token("Token", "TKN", 100000 ether);
 
         faucet = new Faucet(token, FARCASTER_REGISTRY, PERIOD_LENGHT, PERCENTAGE_PER_PERIOD);
 
-        token.mint(address(faucet), 100000 ether);
+        token.transfer(address(faucet), 100000 ether);
     }
 
     function testClaimAndOrRegister() public {
