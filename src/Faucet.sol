@@ -71,7 +71,7 @@ contract Faucet is IFaucet, Ownable {
      * @notice Set percent per period
      * @param _percentPerPeriod Percent of total balance distributed each period
      */
-    function setPercentPerPeriod(uint256 _percentPerPeriod) public onlyOwner {
+    function setPercentPerPeriod(uint256 _percentPerPeriod) external onlyOwner {
         require(_percentPerPeriod <= ONE_HUNDRED_PERCENT, "Invalid period percentage");
 
         percentPerPeriod = _percentPerPeriod;
@@ -85,7 +85,7 @@ contract Faucet is IFaucet, Ownable {
     /**
      * @notice Register for the next period and claim if registered for the current period.
      */
-    function claimAndOrRegister() public hasFid(msg.sender) {
+    function claimAndOrRegister() external hasFid(msg.sender) {
         Claimer storage claimer = claimers[registry.idOf(msg.sender)];
 
         if (!(claimer.registeredForPeriod <= getCurrentPeriod())) {
@@ -107,7 +107,7 @@ contract Faucet is IFaucet, Ownable {
     /**
      * @notice Claim from the faucet without registering for the next period.
      */
-    function claim() public hasFid(msg.sender) {
+    function claim() external hasFid(msg.sender) {
         Claimer storage claimer = claimers[registry.idOf(msg.sender)];
         uint256 currentPeriod = getCurrentPeriod();
 
@@ -122,7 +122,7 @@ contract Faucet is IFaucet, Ownable {
      * @notice Withdraw the faucets entire balance of the faucet distributed token
      * @param _to Address to withdraw to
      */
-    function withdrawDeposit(address _to) public onlyOwner {
+    function withdrawDeposit(address _to) external onlyOwner {
         token.transfer(_to, token.balanceOf(address(this)));
     }
 
