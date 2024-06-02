@@ -11,7 +11,7 @@ contract FaucetScript is Script {
     Faucet public faucet;
 
     // Token settings
-    string constant NAME = "Beyond Venture Capital";
+    string constant NAME = "Beyond VCs";
     string constant SYMBOL = unicode"F😠😫🤕";
     uint256 constant INITIAL_SUPPLY = 1000000000 ether; // 1B
 
